@@ -1,6 +1,6 @@
 import numpy as np
 import time
-
+# Initial permutation (IP) and Final permutation (FP) tables
 IP = [58, 50, 42, 34, 26, 18, 10, 2,
       60, 52, 44, 36, 28, 20, 12, 4,
       62, 54, 46, 38, 30, 22, 14, 6,
@@ -18,16 +18,16 @@ FP = [40, 8, 48, 16, 56, 24, 64, 32,
         35, 3, 43, 11, 51, 19, 59, 27,
         34, 2, 42, 10, 50, 18, 58, 26,
         33, 1, 41, 9, 49, 17, 57, 25]
-
+# Expansion permutation box (EBox) table
 EBox = [32,1,2,3,4,5,
-            4,5,6,7,8,9,
-            8,9,10,11,12,13,
-            12,13,14,15,16,17,
-            16,17,18,19,20,21,
-            20,21,22,23,24,25,
-            24,25,26,27,28,29,
-            28,29,30,31,32,1]
-
+        4,5,6,7,8,9,
+        8,9,10,11,12,13,
+        12,13,14,15,16,17,
+        16,17,18,19,20,21,
+        20,21,22,23,24,25,
+        24,25,26,27,28,29,
+        28,29,30,31,32,1]
+# Substitution boxes (SBox) for the F function
 SBox =[
 		# S1
 		[14, 4, 13, 1, 2, 15, 11, 8, 3, 10, 6, 12, 5, 9, 0, 7,
@@ -77,29 +77,29 @@ SBox =[
 		 7, 11, 4, 1, 9, 12, 14, 2, 0, 6, 10, 13, 15, 3, 5, 8,
 		 2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11],
 	]
-
+# Permutation box for the F function
 F_PBox = [16, 7, 20, 21, 29, 12, 28, 17,
-              1, 15, 23, 26, 5, 18, 31, 10,
-              2, 8, 24, 14, 32, 27, 3, 9,
-              19, 13, 30, 6, 22, 11, 4, 25 ]
-
+        1, 15, 23, 26, 5, 18, 31, 10,
+        2, 8, 24, 14, 32, 27, 3, 9,
+        19, 13, 30, 6, 22, 11, 4, 25 ]
+# Permutation box for key generation
 key_PBox = [14,    17,   11,    24,     1,    5,
-                  3,    28,   15,     6,    21,   10,
-                 23,    19,   12,     4,    26,    8,
-                 16,     7,   27,    20,    13,    2,
-                 41,    52,   31,    37,    47,   55,
-                 30,    40,   51,    45,    33,   48,
-                 44,    49,   39,    56,    34,  53,
-                 46,    42,   50,    36,    29,   32]
+            3,    28,   15,     6,    21,   10,
+            23,    19,   12,     4,    26,    8,
+            16,     7,   27,    20,    13,    2,
+            41,    52,   31,    37,    47,   55,
+            30,    40,   51,    45,    33,   48,
+            44,    49,   39,    56,    34,  53,
+            46,    42,   50,    36,    29,   32]
 
-
+# XOR operation between two binary arrays
 def xor(left,xorstream):
     xorresult = np.logical_xor(left,xorstream)
 
     xorresult  = xorresult.astype(int)
 
     return xorresult
-
+# Expansion permutation in the F function
 def E_box(right):
     expanded = np.empty(48)
     j = 0
@@ -110,27 +110,25 @@ def E_box(right):
     expanded = np.array(expanded)
     return expanded
 
-#clean this code please (sboxlookup)
+# S-box lookup in the F function
 def sboxloopup(sinput,x):
     tableno = x - 1
     row = int((np.array2string(sinput[0]) + np.array2string(sinput[5])),2)
-
     # make this part of the code better
     column = sinput[1:5]
     column = np.array2string(column)
     column = column[1:8].replace(" ", "")
     column = int(column,2)
-    print(column,"column")
-
     elementno = (16 * row) + column
     soutput = SBox[tableno][elementno]
     soutput = list(np.binary_repr(soutput, width=4))
     #converting to list twice seems redundant but seems to be the only simple way as map always returns map object
     soutput= np.array(list(map(int, soutput)))
     return soutput
-
+# S-box operations in the F function
 def sbox(sboxin):
-#takes 48 bit input and return 32 bit
+    #takes 48 bit input and return 32 bit
+    #print ("sboxin: ", sboxin)
     sboxin1 = sboxin[0:6]
     sboxout1 = sboxloopup(sboxin1,1)
     sboxin2 = sboxin[6:12]
@@ -147,9 +145,11 @@ def sbox(sboxin):
     sboxout7 = sboxloopup(sboxin7, 7)
     sboxin8 = sboxin[42:48]
     sboxout8 = sboxloopup(sboxin8, 8)
+    sboxout1 = sboxloopup(sboxin1,1)
     sboxout = np.concatenate([sboxout1,sboxout2,sboxout3,sboxout4,sboxout5,sboxout6,sboxout7,sboxout8])
+    #print ("sboxout: ", sboxout)
     return sboxout
-
+# Permutation in the F function
 def f_permute(topermute):
     permuted= np.empty(32)
     j = 0
@@ -157,14 +157,16 @@ def f_permute(topermute):
         permuted[j] = topermute[i - 1]
         j += 1
     return permuted
-
+# F function in the DES round
 def f_function(right,rkey):
     expanded = E_box(right)
     xored = xor(expanded,rkey)
     sboxed = sbox(xored)
+    #print("sboxed: ", sboxed)
     xorstream = f_permute(sboxed)
+    #print("xorstream: ", xorstream)
     return xorstream
-
+# DES round
 def round(data,rkey):
     l0 = data[0:32]
     r0 = data[32:64]
@@ -175,7 +177,7 @@ def round(data,rkey):
     returndata[0:32] = l1
     returndata[32:64] = r1
     return(returndata)
-
+# Initial and final permutation
 def permutation(data,x):
     #intial and final permutation conditional based on other passed value
     permute1 = np.empty_like(IP)
@@ -193,30 +195,7 @@ def permutation(data,x):
             k += 1
         return(permute2)
 
-def userinput():
-    keyinp = input("Enter the key bits (56 bits) seperated by space " "").strip().split()
-    datainp = input("Enter the data bits (64) to encrypt or decrypt seperated by space " "").strip().split()
-    #change to 56 later
-    lenofkey = 56
-    #change to 64 later
-    lenofdata = 64
-    if len(datainp) == lenofdata and len(keyinp) == lenofkey:
-        print("data entry accepted, data loaded succesfully")
-        print("key entry accepted, key loaded succesfully")
-    else:
-        while len(datainp) != lenofdata:
-            print("length of data entered ",len(datainp))
-            datainp = input("Error in entered data. Enter the data (64 bits) to encrypt or decrypt seperated by space " "").strip().split()
-
-        print("data entry accepted, data loaded succesfully")
-        while len(keyinp) != lenofkey:
-            print("length of key entered ", len(keyinp))
-            keyinp = input("Error in entered key. Enter the key (56 bits) to encrypt or decrypt seperated by space " "").strip().split()
-        print("key entry accepted, key loaded succesfully")
-#also add functionality to accept 64 bit keys instead of 54
-    return keyinp,datainp
-
-
+# Key shifting based on round number
 def keyshift(toshift,n):
     if (n == 1) or (n == 2) or (n == 9) or (n == 16):
         toshift= np.roll(toshift,-1)
@@ -224,7 +203,7 @@ def keyshift(toshift,n):
     else:
         toshift = np.roll(toshift, -2)
         return toshift
-
+# Key permutation for key generation
 def keypermute(key16):
     keypermuted = np.empty([16,48])
     l = 0
@@ -236,8 +215,10 @@ def keypermute(key16):
         l += 1
     return keypermuted
 
-#
+# Key schedule generation
 def keyschedule(key):
+    #if len(key) < 64:
+    #    raise ValueError("Key length must be 64 bits")
     left = key[0:28]
     right = key[28:56]
     shifted = np.zeros(56)
@@ -247,106 +228,89 @@ def keyschedule(key):
         shifted[28:56] = keyshift(right,i)
         left = shifted[0:28]
         right = shifted[28:56]
-#add shifted to key16 and return key16
+        #add shifted to key16 and return key16
         key16[i - 1] = shifted
-#key16 is the final shifted 16 key pair now to permute
+        #key16 is the final shifted 16 key pair now to permute
     key16 = keypermute(key16)
     key16 = [list(map(int, x)) for x in key16]
     key16 = np.array(key16)
     return key16
 
+# Chuyển đổi chuỗi bit thành chuỗi
+def bits_to_string(bits):
+    return ''.join(map(str, bits))
 
-def main():
-    # key, data = userinput()
-    key = ['1', '1', '1', '1', '1', '1', '1', '0', '0', '1', '1', '1', '0', '0', '0', '1', '1', '1', '0', '0', '1', '1', '1', '0', '0', '0', '1', '1', '1', '0', '0', '0', '0', '1', '1', '1', '0', '0', '0', '0', '1', '1', '1', '0', '0', '0', '1', '1', '1', '0', '0', '0', '0', '0', '0', '0']
-    data = ['1', '1', '1', '1', '1', '1', '1', '0', '0', '1', '1', '1', '0', '0', '0', '1', '1', '1', '0', '0', '1', '1', '1', '0', '0', '0', '1', '1', '1', '0', '0', '0', '0', '1', '1', '1', '0', '0', '0', '0', '1', '1', '1', '0', '0', '0', '1', '1', '1', '0', '0', '0', '0', '0', '0', '0', '0', '1', '0', '1', '1', '0', '1', '0']
-    print(data,key)
-#taking input for decryption and encryption
-    starttime = time.time()
+# Chuyển đổi chuỗi thành danh sách bit
+def string_to_bits(string):
+    # Convert each character to its ASCII value and then to 8-bit binary
+    binary_strings = [format(ord(char), '08b') for char in string]
+    # Concatenate the binary strings to get a single binary representation
+    binary_representation = ''.join(binary_strings)
+    # Make sure the binary representation is exactly 64 bits
+    if len(binary_representation) != 64:
+        raise ValueError("Input string must be exactly 8 characters long for a 64-bit block.")
+    # Convert the concatenated binary string to a list of integers
+    return [int(bit) for bit in binary_representation]
+
+def bits_to_string(bits):
+    # Convert the list of bits to a binary string
+    binary_string = ''.join(map(str, bits))
+    # Split the binary string into 8-bit chunks
+    chunks = [binary_string[i:i+8] for i in range(0, len(binary_string), 8)]
+    # Convert each 8-bit chunk to its ASCII character and join them to get the final string
+    result_string = ''.join([chr(int(chunk, 2)) for chunk in chunks])
+    return result_string
+
+
+# Hàm mã hóa DES
+def des_encrypt(plaintext, key):
+    data = string_to_bits(plaintext)
+    key = string_to_bits(key)
     key16 = keyschedule(key)
-    data = permutation(data,0)
-
-    for i in range(16):
-        data = round(data,key16[i])
-
-
-#making left side right and right side left
-    data = np.roll(data,32)
-    data = (permutation(data, 1))
-    print("Time taken to encrypt the data with DES is", time.time() - starttime)
-    print("Encrypted data is", data)
-
-    
 
     data = permutation(data, 0)
-    # testing round function now
     for i in range(16):
-        data = round(data, key16[16 - (i + 1)])
+        data = round(data, key16[i])
+        print(data)
 
     data = np.roll(data, 32)
-    data = (permutation(data, 1))
-    print("Time taken to decrypt the data with DES is", time.time() - starttime)
-    print("Decrypted data is", data)
+    data = permutation(data, 1)
 
+    ciphertext = bits_to_string(data)
+    return ciphertext
 
+# Hàm giải mã DES
+def des_decrypt(ciphertext, key):
+    data = string_to_bits(ciphertext)
+    key = string_to_bits(key)
 
-#real main stops
+    key16 = keyschedule(key)
 
+    data = permutation(data, 0)
+    for i in range(16):
+        data = round(data, key16[16 - (i + 1)])
+        print(data)
 
+    data = np.roll(data, 32)
+    data = permutation(data, 1)
 
-#
-# #testing with madeup data
-#     data1 = np.array([0,1,0,1,0,0,0,1])
-#
-# #testing IP and FP
-#     print(permutation(data, 0))
-#     print(permutation(data, 1))
-#     rkey1 = np.array(range(0,64))
-    # # data1 = round(data,rkey1)
-    # data2 = np.array([1,1,1,1,0,1,1,1])
-    # print(xor(data1,data2))
+    plaintext = bits_to_string(data)
+    return plaintext
+# Main DES encryption and decryption function
+def main():
+   
+    plaintext = input("Nhap vao 8 ki tu:")
+    key = "xuy@tmna"
 
-#ebox testing
-    # data1 = np.array(range(0,32))
-    # print(len(E_box(data1)), E_box(data1))
+    # Encrypt the plaintext
+    ciphertext = des_encrypt(plaintext, key)
+    print("-- -- -- -- -- -- -- -- --")
+    print("Encrypted data is:", ciphertext)
 
-    # sboxtest = np.array([0,1,1,1,1,1,1,1,0,0,0,1,1,1,1,0,0,0,1,0,0,0,1,1,0,0,0,1,0,0,0,0,1,1,1,0,0,1,0,1,0,0,0,1,1,0,0,1])
-    # print(len(sboxtest))
-    # sboxoutput = sbox(sboxtest)
-    # print(sboxoutput)
+    # Decrypt the ciphertext
+    decrypted_text = des_decrypt(ciphertext, key)
+    print("-- -- -- -- -- -- -- -- --")
+    print("Decrypted data is:", decrypted_text)
 
-
-    # key = np.array([0,1,1,1,1,1,1,1,0,0,0,1,1,1,1,0,0,0,1,0,0,0,1,1,0,0,0,1,0,0,0,0,1,1,1,0,0,1,0,1,0,0,0,1,1,0,0,1,0,0,1,1,0,1,1,0])
-    # key16 = keyschedule(key)
-    # print(key16)
-#calling key schedule
-    # for i in range(0,16):
-    # roundkey = key16[i]
-    # print(roundkey)
-    #     roundresult = round(data,roundkey)
-    #     data = roundresult
-
-
-    # totestshift = np.array([0,1,1,1,1,1,1,1,0,0,0,1,1,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1])
-    # print("test data", totestshift)
-    # print(keyshift(totestshift,1))
-    # print(keyshift(totestshift,3))
-    #
-    # permutekeygen = list(range(1,57))
-    # key16permutetest = np.empty([16,56])
-    # for i in range(16):
-    #     key16permutetest[i] = permutekeygen
-    #
-    # keypermute(key16permutetest)
-    #
-
-
-
-main()
-
-#data to test
-#key = 1 0 0 0 1 0 1 1 1 0 0 1 0 1 0 0 0 0 1 1 0 0 0 1 1 1 0 1 0 1 1 0 1 0 1 0 0 1 0 1 0 0 0 1 1 0 1 0 0 1 0 0 1 0 0 0
-# #data = 1 0 0 0 1 0 1 1 1 0 0 1 0 1 0 0 0 0 1 1 0 0 0 1 1 1 0 1 0 1 1 0 1 0 1 0 0 1 0 1 0 0 0 1 1 0 1 0 0 1 0 0 1 0 0 0 1 1 0 1 0 0 1 0
-
-
-#what is left: 64 bit key support
+if __name__ == "__main__":
+    main()
